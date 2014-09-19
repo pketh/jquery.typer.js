@@ -40,6 +40,22 @@ There are some options that are available to you as well:
 }
 ```
 
+## Usage on [freshbooks.com/creatives](http://www.freshbooks.com/creatives)
+
+```javascript
+// Fancy
+{
+	$.typer.options.tapeColor = 'rgba(255,255,255,.35)';
+	$.typer.options.textColor = 'rgb(255,255,255)';
+	$.typer.options.highlightSpeed = 40;
+	$.typer.options.typeSpeed = 130;
+	$.typer.options.typerInterval = 2000;
+	$.typer.options.initialDelay = 2000;
+	$.typer.options.typerDataAttr = 'data-typer-text-replacement';
+	$('[data-typer-text-replacement]').typer();
+}
+```
+
 Set the options individually:
 
 ```javascript
