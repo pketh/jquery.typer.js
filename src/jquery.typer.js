@@ -1,3 +1,8 @@
+// typer.js by Layervault
+// http://cosmos.layervault.com/typer-js.html
+// built June 12, 2014
+// incorporates changes from unmerged forks, and some custom stuff for only looping once
+
 String.prototype.rightChars = function(n){
   if (n <= 0) {
     return "";
@@ -19,7 +24,12 @@ String.prototype.rightChars = function(n){
       typeDelay         : 200,
       clearOnHighlight  : true,
       typerDataAttr     : 'data-typer-targets',
-      typerInterval     : 2000
+      typerOrder        : 'sequential',
+      typerInterval     : 2000,
+      tapeColor         : 'auto',
+      textColor         : null,
+      highlightEverything: true,
+      initialDelay      : 500
     },
     highlight,
     clearText,
@@ -33,6 +43,7 @@ String.prototype.rightChars = function(n){
     typeWithAttribute,
     getHighlightInterval,
     getTypeInterval,
+    intervalHandle,
     typerInterval;
 
   spanWithColor = function(color, backgroundColor) {
@@ -131,7 +142,7 @@ String.prototype.rightChars = function(n){
       .append(
         spanWithColor(
             $e.data('backgroundColor'),
-            $e.data('primaryColor')
+            $.typer.options.tapeColor === 'auto' ? $e.data('primaryColor') : $.typer.options.tapeColor
           )
           .append(highlightedText)
       )
@@ -144,25 +155,43 @@ String.prototype.rightChars = function(n){
     }, getHighlightInterval());
   };
 
-  typeWithAttribute = function ($e) {
-    var targets;
+  typeWithAttribute = (function () {
+    var last = 0;
 
-    if ($e.data('typing')) {
-      return;
+    return function($e) {
+      var targets;
+
+      if ($e.data('typing')) {
+        return;
+      }
+
+      try {
+        targets = JSON.parse($e.attr($.typer.options.typerDataAttr)).targets;
+      } catch (e) {}
+
+      if (typeof targets === "undefined") {
+        targets = $.map($e.attr($.typer.options.typerDataAttr).split(','), function (e) {
+          return $.trim(e);
+        });
+      }
+
+      if ($.typer.options.typerOrder == 'random') {
+        $e.typeTo(targets[Math.floor(Math.random()*targets.length)]);
+      }
+      else if ($.typer.options.typerOrder == 'sequential') {
+        if (last !== targets.length) {
+          $e.typeTo(targets[last]);
+          last++
+        } else {
+          console.log('end loop');
+        }
+      }
+      else {
+        console.error("Type order of '" + $.typer.options.typerOrder + "' not supported");
+        clearInterval(intervalHandle);
+      }
     }
-
-    try {
-      targets = JSON.parse($e.attr($.typer.options.typerDataAttr)).targets;
-    } catch (e) {}
-
-    if (typeof targets === "undefined") {
-      targets = $.map($e.attr($.typer.options.typerDataAttr).split(','), function (e) {
-        return $.trim(e);
-      });
-    }
-
-    $e.typeTo(targets[Math.floor(Math.random()*targets.length)]);
-  };
+  })();
 
   // Expose our options to the world.
   $.typer = (function () {
@@ -186,7 +215,7 @@ String.prototype.rightChars = function(n){
       }
 
       typeWithAttribute($e);
-      setInterval(function () {
+      intervalHandle = setInterval(function () {
         typeWithAttribute($e);
       }, typerInterval());
     });
@@ -211,14 +240,15 @@ String.prototype.rightChars = function(n){
 
     $e.data('typing', true);
 
-    while (currentText.charAt(i) === newString.charAt(i)) {
-      i++;
-    }
+    if ($.typer.options.highlightEverything !== true) {
+      while (currentText.charAt(i) === newString.charAt(i)) {
+        i++;
+      }
 
-    while (currentText.rightChars(j) === newString.rightChars(j)) {
-      j++;
+      while (currentText.rightChars(j) === newString.rightChars(j)) {
+        j++;
+      }
     }
-
     newString = newString.substring(i, newString.length - j + 1);
 
     $e.data({
@@ -226,14 +256,18 @@ String.prototype.rightChars = function(n){
       oldRight: currentText.rightChars(j - 1),
       leftStop: i,
       rightStop: currentText.length - j,
-      primaryColor: $e.css('color'),
-      backgroundColor: $e.css('background-color'),
+      primaryColor: $.typer.options.highlightColor || $e.css('color'),
+      backgroundColor: $.typer.options.textColor || $e.css('background-color'),
       text: newString
     });
 
-    highlight($e);
+    var initDelay = function() {
+      highlight($e);
+      return $e;
+    }
 
-    return $e;
+    window.setTimeout(initDelay, $.typer.options.initialDelay)
+
   };
 
   //-- Helper methods. These can one day be customized further to include things like ranges of delays.
